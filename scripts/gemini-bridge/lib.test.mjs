@@ -1,0 +1,97 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  applyEdits,
+  buildPrompt,
+  MAX_EDITS,
+  MAX_FILE_CHARS,
+  parseCommand,
+  parseEdits,
+  ProposalError,
+} from './lib.mjs';
+
+const files = new Map([
+  ['README.md', '# Title\n\nAlpha line\nBeta line\n'],
+  ['prompts.csv', 'act,prompt\n"Coach","Be kind"\n'],
+]);
+
+const edit = (overrides) => ({ summary: 'Test', edits: [{ path: 'README.md', search: 'Alpha line', replace: 'Gamma line', ...overrides }] });
+
+test('parseCommand recognises question and fix mode', () => {
+  assert.deepEqual(parseCommand('/gemini what is this?'), { propose: false, task: 'what is this?' });
+  assert.deepEqual(parseCommand('/gemini fix add a typo fix'), { propose: true, task: 'add a typo fix' });
+  assert.deepEqual(parseCommand('/gemini fix'), { propose: true, task: '' });
+  assert.deepEqual(parseCommand('/gemini fixing things'), { propose: false, task: 'fixing things' });
+  assert.equal(parseCommand('hello /gemini'), null);
+});
+
+test('buildPrompt rejects context that exceeds the limit', () => {
+  const big = { path: 'README.md', content: 'x'.repeat(400_001) };
+  assert.throws(() => buildPrompt({ task: 'x', files: [big] }), /Kontext zu groß/);
+});
+
+test('parseEdits extracts JSON surrounded by prose or a code fence', () => {
+  const text = 'Hier ist mein Vorschlag:\n```json\n{"summary": "Fix", "edits": []}\n```';
+  assert.deepEqual(parseEdits(text), { summary: 'Fix', edits: [] });
+});
+
+test('parseEdits rejects missing, invalid or misshapen JSON', () => {
+  assert.throws(() => parseEdits('kein JSON hier'), ProposalError);
+  assert.throws(() => parseEdits('{"summary": ,}'), ProposalError);
+  assert.throws(() => parseEdits('{"summary": 1, "edits": []}'), ProposalError);
+});
+
+test('applyEdits applies a single unique replacement', () => {
+  const changed = applyEdits(edit({}), files);
+  assert.equal(changed.get('README.md'), '# Title\n\nGamma line\nBeta line\n');
+  assert.equal(changed.has('prompts.csv'), false);
+});
+
+test('applyEdits applies sequential edits to the same file', () => {
+  const proposal = {
+    summary: 'Two edits',
+    edits: [
+      { path: 'README.md', search: 'Alpha', replace: 'One' },
+      { path: 'README.md', search: 'One line', replace: 'Two line' },
+    ],
+  };
+  assert.equal(applyEdits(proposal, files).get('README.md'), '# Title\n\nTwo line\nBeta line\n');
+});
+
+test('applyEdits treats $ patterns in the replacement as literal text', () => {
+  const changed = applyEdits(edit({ replace: 'costs $& and $1' }), files);
+  assert.match(changed.get('README.md'), /costs \$& and \$1/);
+});
+
+test('applyEdits returns nothing for a no-op edit', () => {
+  assert.equal(applyEdits(edit({ search: 'Alpha line', replace: 'Alpha line' }), files).size, 0);
+});
+
+test('applyEdits rejects paths outside the allowlist', () => {
+  for (const path of ['../README.md', '/etc/passwd', 'scripts/gemini-bridge/bot.mjs', '.github/workflows/gemini_bot.yml', 'README.md/', 'readme.md']) {
+    assert.throws(() => applyEdits(edit({ path }), files), /Pfad nicht erlaubt/, path);
+  }
+});
+
+test('applyEdits rejects allowlisted files that are not in the context', () => {
+  assert.throws(
+    () => applyEdits({ summary: 's', edits: [{ path: 'CONTRIBUTING.md', search: 'a', replace: 'b' }] }, files),
+    /nicht im Kontext/,
+  );
+});
+
+test('applyEdits requires the search text to occur exactly once', () => {
+  assert.throws(() => applyEdits(edit({ search: 'Missing' }), files), /0×/);
+  assert.throws(() => applyEdits(edit({ search: 'line' }), files), /2×/);
+});
+
+test('applyEdits rejects empty search text and too many edits', () => {
+  assert.throws(() => applyEdits(edit({ search: '' }), files), /Ungültiger Edit/);
+  const many = { summary: 's', edits: Array.from({ length: MAX_EDITS + 1 }, () => ({ path: 'README.md', search: 'a', replace: 'b' })) };
+  assert.throws(() => applyEdits(many, files), /Erwartet 1 bis/);
+  assert.throws(() => applyEdits({ summary: 's', edits: [] }, files), /Erwartet 1 bis/);
+});
+
+test('applyEdits rejects results that grow past the file limit', () => {
+  assert.throws(() => applyEdits(edit({ replace: 'x'.repeat(MAX_FILE_CHARS) }), files), /zu groß/);
+});

@@ -1,0 +1,83 @@
+name: Gemini Bot
+
+# "/gemini <Frage>" answers as a comment. "/gemini fix <Auftrag>" opens a draft PR with validated edits.
+# Security notes:
+# - The job checks out the default branch only, never the PR head. Comment text is untrusted input.
+# - Only OWNER, MEMBER and COLLABORATOR can trigger it.
+# - Gemini can only change the files in ALLOWED_PATHS (scripts/gemini-bridge/lib.mjs), and only as draft PRs. Merging is a human step.
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  gemini:
+    if: >-
+      startsWith(github.event.comment.body, '/gemini') &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    concurrency:
+      group: gemini-${{ github.event.issue.number || github.event.pull_request.number }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ITEM_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+      IS_PR: ${{ github.event_name == 'pull_request_review_comment' || github.event.issue.pull_request != null }}
+      COMMENT_BODY: ${{ github.event.comment.body }}
+      OUT_DIR: ${{ runner.temp }}/gemini
+
+    steps:
+      - name: Check out default branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Fetch PR diff for context
+        if: env.IS_PR == 'true'
+        run: |
+          mkdir -p "$OUT_DIR"
+          gh pr diff "$ITEM_NUMBER" --repo "$GITHUB_REPOSITORY" > "$OUT_DIR/pr.diff" || true
+
+      - name: Ask Gemini
+        id: bot
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: node scripts/gemini-bridge/bot.mjs
+
+      - name: Open draft PR
+        if: steps.bot.outputs.applied == 'true'
+        run: |
+          branch="gemini/${ITEM_NUMBER}-${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add -A
+          git commit -m "Gemini: $(cat "$OUT_DIR/summary.txt")"
+          git push -u origin "$branch"
+          gh pr create --draft --base main --head "$branch" \
+            --title "Gemini: $(cat "$OUT_DIR/summary.txt")" \
+            --body "Vorschlag zu #${ITEM_NUMBER}. Bitte prüfen, bevor du merged." \
+            --repo "$GITHUB_REPOSITORY" > "$OUT_DIR/pr_url.txt"
+
+      - name: Post reply
+        run: |
+          if [ -s "$OUT_DIR/pr_url.txt" ]; then
+            printf '\nDraft-PR: %s\n' "$(cat "$OUT_DIR/pr_url.txt")" >> "$OUT_DIR/reply.md"
+          fi
+          gh issue comment "$ITEM_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$OUT_DIR/reply.md"
+
+      - name: Report failure
+        if: failure()
+        run: |
+          body="❌ Gemini-Bridge ist fehlgeschlagen. Details: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          footer='_Generiert mit Gemini über die Repo-Bridge (`/gemini`). Vor dem Übernehmen bitte prüfen._'
+          gh issue comment "$ITEM_NUMBER" --repo "$GITHUB_REPOSITORY" --body "$(printf '%s\n\n---\n%s' "$body" "$footer")"
