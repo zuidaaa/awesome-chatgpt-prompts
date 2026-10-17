@@ -5,7 +5,8 @@ Gemini als zweiter Mitarbeiter im Projekt: über GitHub-Kommentare oder lokal im
 ## Setup
 
 1. **Secret** `GEMINI_API_KEY` unter *Settings → Secrets and variables → Actions* anlegen.
-2. **Variable** `GEMINI_MODEL` mit der Modell-ID anlegen. Es gibt bewusst keinen Standardwert im Code. Die ID vorher auf https://ai.google.dev gegenprüfen.
+
+Das Modell ist im Code fest auf `gemini-4-argon` gesetzt (`MODEL` in `bridge.mjs`), geprüft gegen https://ai.google.dev/gemini-api/docs/models. Zum Wechseln die Konstante ändern.
 
 ## GitHub: `/gemini`
 
@@ -25,7 +26,7 @@ Der Workflow ist `.github/workflows/gemini_bot.yml`. Er checkt nur den Default-B
 ## Lokal: `bridge.mjs`
 
 ```sh
-GEMINI_API_KEY=... GEMINI_MODEL=... node scripts/gemini-bridge/bridge.mjs "Ist dieser Absatz verständlich?" --file CONTRIBUTING.md
+GEMINI_API_KEY=... node scripts/gemini-bridge/bridge.mjs "Ist dieser Absatz verständlich?" --file CONTRIBUTING.md
 ```
 
 Das Skript schreibt nie Dateien. Mit `--propose` wird der rohe Edit-Vorschlag ausgegeben.

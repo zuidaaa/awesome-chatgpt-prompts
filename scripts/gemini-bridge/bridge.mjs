@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Thin client for the Gemini API, plus a local CLI. Uses global fetch (Node 18+), so there are no npm dependencies.
 //
-//   GEMINI_API_KEY=... GEMINI_MODEL=... node scripts/gemini-bridge/bridge.mjs "<Frage>" [--file README.md] [--propose]
+//   GEMINI_API_KEY=... node scripts/gemini-bridge/bridge.mjs "<Frage>" [--file README.md] [--propose]
 //
 // The CLI only prints. It never writes files; the GitHub workflow (bot.mjs) is the only place that applies edits.
 
@@ -10,6 +10,8 @@ import { pathToFileURL } from 'node:url';
 import { buildPrompt, PROPOSAL_FORMAT } from './lib.mjs';
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
+// Verified against https://ai.google.dev/gemini-api/docs/models (Gemini 4 Argon, Stable).
+export const MODEL = 'gemini-4-argon';
 const SYSTEM = 'Du bist ein Projektassistent für ein Repository mit Prompt-Sammlungen. Antworte auf Deutsch, knapp, sachlich und kritisch.';
 
 function requireEnv(name) {
@@ -42,12 +44,11 @@ export async function generate({ apiKey, model, system, prompt, fetchImpl = fetc
   return text;
 }
 
-// Reads GEMINI_API_KEY and GEMINI_MODEL from the environment. There is deliberately no default model:
-// the model ID must be set explicitly as a repository variable.
+// Reads GEMINI_API_KEY from the environment. The model is fixed in MODEL.
 export async function askGemini({ task, files = [], propose = false, fetchImpl }) {
   return generate({
     apiKey: requireEnv('GEMINI_API_KEY'),
-    model: requireEnv('GEMINI_MODEL'),
+    model: MODEL,
     system: propose ? `${SYSTEM}\n\n${PROPOSAL_FORMAT}` : SYSTEM,
     prompt: buildPrompt({ task, files }),
     fetchImpl,

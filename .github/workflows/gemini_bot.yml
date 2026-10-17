@@ -51,7 +51,6 @@ jobs:
         id: bot
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
         run: node scripts/gemini-bridge/bot.mjs
 
       - name: Open draft PR
