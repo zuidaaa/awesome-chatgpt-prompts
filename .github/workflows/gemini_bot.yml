@@ -30,7 +30,6 @@ jobs:
       ITEM_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
       IS_PR: ${{ github.event_name == 'pull_request_review_comment' || github.event.issue.pull_request != null }}
       COMMENT_BODY: ${{ github.event.comment.body }}
-      OUT_DIR: ${{ runner.temp }}/gemini
 
     steps:
       - name: Check out default branch
@@ -40,6 +39,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      # runner.* is not available in job-level env, so the output path is set here.
+      - name: Set output directory
+        run: echo "OUT_DIR=$RUNNER_TEMP/gemini" >> "$GITHUB_ENV"
 
       - name: Fetch PR diff for context
         if: env.IS_PR == 'true'
