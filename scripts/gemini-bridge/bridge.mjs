@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Thin client for the Gemini API, plus a local CLI. Uses global fetch (Node 18+), so there are no npm dependencies.
 //
-//   GEMINI_API_KEY=... node scripts/gemini-bridge/bridge.mjs "<Frage>" [--file README.md] [--propose]
+//   GEMINI_API_KEY=... node scripts/gemini-bridge/bridge.mjs "<Frage>" [--file README.md] [--propose] [--flagship]
 //
 // The CLI only prints. It never writes files; the GitHub workflow (bot.mjs) is the only place that applies edits.
 
@@ -104,10 +104,10 @@ export async function generate({ apiKey, model, system, prompt, fetchImpl = fetc
   };
 }
 
-// Reads GEMINI_API_KEY from the environment. The model is chosen by mode and input size, see chooseModel in lib.mjs.
+// Reads GEMINI_API_KEY from the environment. The model is chosen by input size (or flagship), see chooseModel in lib.mjs.
 // Returns { text, model, usage }.
-export async function askGemini({ task, files = [], mode = 'answer', fetchImpl, sleep }) {
-  const model = chooseModel({ mode, task, files });
+export async function askGemini({ task, files = [], mode = 'answer', flagship = false, fetchImpl, sleep }) {
+  const model = chooseModel({ task, files, flagship });
   const format = MODE_FORMAT[mode];
   const { text, usage } = await generate({
     apiKey: requireEnv('GEMINI_API_KEY'),
@@ -124,25 +124,27 @@ function parseArgs(argv) {
   const task = [];
   const files = [];
   let propose = false;
+  let flagship = false;
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--file') files.push(argv[++i]);
     else if (argv[i] === '--propose') propose = true;
+    else if (argv[i] === '--flagship') flagship = true;
     else task.push(argv[i]);
   }
-  return { task: task.join(' '), files, propose };
+  return { task: task.join(' '), files, propose, flagship };
 }
 
 async function main() {
-  const { task, files, propose } = parseArgs(process.argv.slice(2));
+  const { task, files, propose, flagship } = parseArgs(process.argv.slice(2));
   if (!task) {
-    console.error('Usage: node scripts/gemini-bridge/bridge.mjs "<Frage>" [--file <pfad>]... [--propose]');
+    console.error('Usage: node scripts/gemini-bridge/bridge.mjs "<Frage>" [--file <pfad>]... [--propose] [--flagship]');
     process.exit(2);
   }
 
   const context = await Promise.all(
     files.map(async (path) => ({ path, content: await readFile(path, 'utf8') })),
   );
-  const { text, model, usage } = await askGemini({ task, files: context, mode: propose ? 'fix' : 'answer' });
+  const { text, model, usage } = await askGemini({ task, files: context, mode: propose ? 'fix' : 'answer', flagship });
   console.log(text);
   // Usage goes to stderr so stdout stays clean for a caller (e.g. Claude Code) that reads only the answer.
   console.error(formatUsage({ model, usage }));

@@ -13,37 +13,23 @@ export const MODELS = {
   standard: 'gemini-3.8-flash',
   flagship: 'gemini-4-argon',
 };
-// Input size bands (task text plus all context). Above COMPLEX_CHARS the input is "large",
-// above VERY_COMPLEX_CHARS it is "very large".
+// Above COMPLEX_CHARS (task text plus all context) a request counts as large.
 export const COMPLEX_CHARS = 20_000;
-export const VERY_COMPLEX_CHARS = 100_000;
 
 // Context size limits per mode. The full README is ~126 KB, which would push every answer
 // over the cheap-model threshold in chooseModel, so answers only get an excerpt.
 export const README_EXCERPT_CHARS = 6_000;
 export const MAX_DIFF_CHARS = 100_000;
 
-// Intent (command mode) and complexity (input size) pick the model. Cheapest wins where the intent allows it.
-// answer: a question, usually with the contributing guide and README excerpt as context.
-// review: a question about a PR diff, which needs more reasoning than a plain question.
-// fix: edits that must be exact, so the standard model is the minimum.
-export const MODEL_MATRIX = {
-  answer: { small: MODELS.cheap, large: MODELS.standard, veryLarge: MODELS.flagship },
-  review: { small: MODELS.standard, large: MODELS.standard, veryLarge: MODELS.flagship },
-  fix: { small: MODELS.standard, large: MODELS.flagship, veryLarge: MODELS.flagship },
-};
-
-export function sizeBand({ task = '', files = [] }) {
-  const size = task.length + files.reduce((sum, file) => sum + file.content.length, 0);
-  if (size > VERY_COMPLEX_CHARS) return 'veryLarge';
-  if (size > COMPLEX_CHARS) return 'large';
-  return 'small';
+export function isLarge({ task = '', files = [] }) {
+  return task.length + files.reduce((sum, file) => sum + file.content.length, 0) > COMPLEX_CHARS;
 }
 
-// For fix, the context is always the allowlisted files, and README.md and prompts.csv are each over
-// VERY_COMPLEX_CHARS. Counting them would send every fix to the flagship, so a fix is sized by its task text only.
-export function chooseModel({ mode = 'answer', task = '', files = [] }) {
-  return MODEL_MATRIX[mode][sizeBand({ task, files: mode === 'fix' ? [] : files })];
+// Cheapest by default, the standard model for large requests. The flagship is never picked
+// automatically: input size cannot tell whether a request is truly hard, so only "/gemini!" asks for it.
+export function chooseModel({ task = '', files = [], flagship = false }) {
+  if (flagship) return MODELS.flagship;
+  return isLarge({ task, files }) ? MODELS.standard : MODELS.cheap;
 }
 
 const PATH_MENTIONS = {
@@ -112,11 +98,11 @@ export class ProposalError extends Error {
 }
 
 // "/gemini <Frage>" (answer), "/gemini review <Frage>" (answer with PR diff), "/gemini fix <Auftrag>" (edits).
-// Returns null if the text is not a command.
+// "/gemini!" instead of "/gemini" asks for the flagship model. Returns null if the text is not a command.
 export function parseCommand(body) {
-  const match = body.trim().match(/^\/gemini(?:\s+(fix|review)\b)?\s*([\s\S]*)$/);
+  const match = body.trim().match(/^\/gemini(!)?(?:\s+(fix|review)\b)?\s*([\s\S]*)$/);
   if (!match) return null;
-  return { mode: match[1] ?? 'answer', task: match[2].trim() };
+  return { mode: match[2] ?? 'answer', task: match[3].trim(), flagship: Boolean(match[1]) };
 }
 
 export function buildPrompt({ task, files = [] }) {

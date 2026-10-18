@@ -17,7 +17,6 @@ import {
   ProposalError,
   README_EXCERPT_CHARS,
   selectFixPaths,
-  VERY_COMPLEX_CHARS,
 } from './lib.mjs';
 
 const files = new Map([
@@ -28,42 +27,39 @@ const files = new Map([
 const edit = (overrides) => ({ summary: 'Test', edits: [{ path: 'README.md', search: 'Alpha line', replace: 'Gamma line', ...overrides }] });
 
 test('parseCommand recognises answer, review and fix modes', () => {
-  assert.deepEqual(parseCommand('/gemini what is this?'), { mode: 'answer', task: 'what is this?' });
-  assert.deepEqual(parseCommand('/gemini review check the diff'), { mode: 'review', task: 'check the diff' });
-  assert.deepEqual(parseCommand('/gemini fix add a typo fix'), { mode: 'fix', task: 'add a typo fix' });
-  assert.deepEqual(parseCommand('/gemini fix'), { mode: 'fix', task: '' });
-  assert.deepEqual(parseCommand('/gemini fixing things'), { mode: 'answer', task: 'fixing things' });
-  assert.deepEqual(parseCommand('/gemini reviewing things'), { mode: 'answer', task: 'reviewing things' });
+  assert.deepEqual(parseCommand('/gemini what is this?'), { mode: 'answer', task: 'what is this?', flagship: false });
+  assert.deepEqual(parseCommand('/gemini review check the diff'), { mode: 'review', task: 'check the diff', flagship: false });
+  assert.deepEqual(parseCommand('/gemini fix add a typo fix'), { mode: 'fix', task: 'add a typo fix', flagship: false });
+  assert.deepEqual(parseCommand('/gemini fix'), { mode: 'fix', task: '', flagship: false });
+  assert.deepEqual(parseCommand('/gemini fixing things'), { mode: 'answer', task: 'fixing things', flagship: false });
+  assert.deepEqual(parseCommand('/gemini reviewing things'), { mode: 'answer', task: 'reviewing things', flagship: false });
   assert.equal(parseCommand('hello /gemini'), null);
+});
+
+test('parseCommand marks "/gemini!" as a flagship request in every mode', () => {
+  assert.deepEqual(parseCommand('/gemini! hard question'), { mode: 'answer', task: 'hard question', flagship: true });
+  assert.deepEqual(parseCommand('/gemini! review check it'), { mode: 'review', task: 'check it', flagship: true });
+  assert.deepEqual(parseCommand('/gemini! fix the csv'), { mode: 'fix', task: 'the csv', flagship: true });
 });
 
 const sized = (chars) => [{ path: 'README.md', content: 'x'.repeat(chars) }];
 
-test('chooseModel uses the cheapest model for a short question', () => {
-  assert.equal(chooseModel({ mode: 'answer', task: 'Kurze Frage?' }), MODELS.cheap);
+test('chooseModel uses the cheapest model by default', () => {
   assert.equal(chooseModel({ task: 'Kurze Frage?' }), MODELS.cheap);
+  assert.equal(chooseModel({ task: 'Prüfen', files: sized(COMPLEX_CHARS - 100) }), MODELS.cheap);
 });
 
-test('chooseModel uses the standard model for a review of a small diff', () => {
-  assert.equal(chooseModel({ mode: 'review', task: 'Prüfen', files: sized(1_000) }), MODELS.standard);
+test('chooseModel uses the standard model once task plus context is large', () => {
+  assert.equal(chooseModel({ task: 'Frage', files: sized(COMPLEX_CHARS) }), MODELS.standard);
+  assert.equal(chooseModel({ task: 'x'.repeat(COMPLEX_CHARS + 1) }), MODELS.standard);
 });
 
-test('chooseModel uses the standard model for a small fix', () => {
-  assert.equal(chooseModel({ mode: 'fix', task: 'Typo beheben', files: sized(1_000) }), MODELS.standard);
+test('chooseModel never picks the flagship from size alone', () => {
+  assert.equal(chooseModel({ task: 'Typo beheben', files: sized(400_000) }), MODELS.standard);
 });
 
-test('chooseModel moves a large answer up to standard and a very large one to flagship', () => {
-  assert.equal(chooseModel({ mode: 'answer', task: 'Frage', files: sized(COMPLEX_CHARS) }), MODELS.standard);
-  assert.equal(chooseModel({ mode: 'answer', task: 'Frage', files: sized(VERY_COMPLEX_CHARS) }), MODELS.flagship);
-});
-
-test('chooseModel sizes a fix by its task, not by the allowlisted files it carries', () => {
-  assert.equal(chooseModel({ mode: 'fix', task: 'Typo beheben', files: sized(VERY_COMPLEX_CHARS + 1) }), MODELS.standard);
-  assert.equal(chooseModel({ mode: 'fix', task: 'x'.repeat(COMPLEX_CHARS + 1) }), MODELS.flagship);
-});
-
-test('chooseModel keeps a large review on the standard model', () => {
-  assert.equal(chooseModel({ mode: 'review', task: 'Prüfen', files: sized(COMPLEX_CHARS) }), MODELS.standard);
+test('chooseModel uses the flagship only when asked for it', () => {
+  assert.equal(chooseModel({ task: 'Kurze Frage?', flagship: true }), MODELS.flagship);
 });
 
 test('selectFixPaths sends only the files a fix task names', () => {
@@ -75,11 +71,6 @@ test('selectFixPaths sends only the files a fix task names', () => {
 
 test('selectFixPaths falls back to every allowlisted file when none is named', () => {
   assert.deepEqual(selectFixPaths('Neuen Prompt "Koch" hinzufügen'), ALLOWED_PATHS);
-});
-
-test('chooseModel counts the task text towards the size band', () => {
-  assert.equal(chooseModel({ mode: 'answer', task: 'x'.repeat(COMPLEX_CHARS + 1) }), MODELS.standard);
-  assert.equal(chooseModel({ mode: 'answer', task: 'x'.repeat(VERY_COMPLEX_CHARS + 1) }), MODELS.flagship);
 });
 
 test('buildContext gives fix mode every allowlisted file as-is', () => {
