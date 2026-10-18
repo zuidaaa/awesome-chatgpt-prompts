@@ -7,11 +7,9 @@
 
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
-import { buildPrompt, PROPOSAL_FORMAT } from './lib.mjs';
+import { buildPrompt, chooseModel, PROPOSAL_FORMAT } from './lib.mjs';
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
-// Verified against https://ai.google.dev/gemini-api/docs/models (Gemini 4 Argon, Stable).
-export const MODEL = 'gemini-4-argon';
 const SYSTEM = 'Du bist ein Projektassistent für ein Repository mit Prompt-Sammlungen. Antworte auf Deutsch, knapp, sachlich und kritisch.';
 
 function requireEnv(name) {
@@ -44,11 +42,11 @@ export async function generate({ apiKey, model, system, prompt, fetchImpl = fetc
   return text;
 }
 
-// Reads GEMINI_API_KEY from the environment. The model is fixed in MODEL.
+// Reads GEMINI_API_KEY from the environment. The model is chosen by input size, see chooseModel in lib.mjs.
 export async function askGemini({ task, files = [], propose = false, fetchImpl }) {
   return generate({
     apiKey: requireEnv('GEMINI_API_KEY'),
-    model: MODEL,
+    model: chooseModel({ task, files, propose }),
     system: propose ? `${SYSTEM}\n\n${PROPOSAL_FORMAT}` : SYSTEM,
     prompt: buildPrompt({ task, files }),
     fetchImpl,
