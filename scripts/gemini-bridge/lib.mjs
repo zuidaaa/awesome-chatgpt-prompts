@@ -7,6 +7,22 @@ export const MAX_EDITS = 10;
 export const MAX_FILE_CHARS = 300_000;
 export const MAX_CONTEXT_CHARS = 400_000;
 
+// Model IDs as listed on https://ai.google.dev/gemini-api/docs/models (checked 2026-10-18).
+export const MODELS = {
+  cheap: 'gemini-3.5-flash-lite',
+  standard: 'gemini-3.8-flash',
+  flagship: 'gemini-4-argon',
+};
+// Above this input size the flagship model is used. Below it, the cheapest model answers questions.
+export const COMPLEX_CHARS = 20_000;
+
+// Cheapest model by default. Edits get the standard model, very large inputs get the flagship.
+export function chooseModel({ task, files = [], propose = false }) {
+  const size = task.length + files.reduce((sum, file) => sum + file.content.length, 0);
+  if (size > COMPLEX_CHARS) return MODELS.flagship;
+  return propose ? MODELS.standard : MODELS.cheap;
+}
+
 // Edits instead of whole files: README.md and prompts.csv are ~100 KB each, too large to return in full.
 export const PROPOSAL_FORMAT = `Antworte NUR mit einem JSON-Objekt dieser Form:
 {"summary": "Eine Zeile, max. 70 Zeichen", "edits": [{"path": "<Pfad>", "search": "<exakter bestehender Text>", "replace": "<neuer Text>"}]}

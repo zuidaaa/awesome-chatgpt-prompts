@@ -21,7 +21,7 @@
 {"@context":"https://schema.org","@type":"WebPage","description":"This repo includes ChatGPT prompt curation to use ChatGPT and other LLM tools better.","headline":"Gemini-Bridge","url":"/scripts/gemini-bridge/"}</script>
 <!-- End Jekyll SEO tag -->
 
-    <link rel="stylesheet" href="/assets/css/style.css?v=2e0b70d1080b342da58d5616f8afc8febf0d2c38">
+    <link rel="stylesheet" href="/assets/css/style.css?v=1f86ee3aec4f3c7421f7e8ab0cc28e37fcc5fc55">
     <style>
       :root {
         --bg-color-light: #ffffff;
@@ -981,7 +981,15 @@
   <li><strong>Secret</strong> <code class="language-plaintext highlighter-rouge">GEMINI_API_KEY</code> unter <em>Settings → Secrets and variables → Actions</em> anlegen.</li>
 </ol>
 
-<p>Das Modell ist im Code fest auf <code class="language-plaintext highlighter-rouge">gemini-4-argon</code> gesetzt (<code class="language-plaintext highlighter-rouge">MODEL</code> in <code class="language-plaintext highlighter-rouge">bridge.mjs</code>), geprüft gegen https://ai.google.dev/gemini-api/docs/models. Zum Wechseln die Konstante ändern.</p>
+<p>Die Modellwahl richtet sich nach der Eingabegröße (<code class="language-plaintext highlighter-rouge">chooseModel</code> in <code class="language-plaintext highlighter-rouge">lib.mjs</code>), sparsam als Standard:</p>
+
+<ul>
+  <li>Kurze Fragen: <code class="language-plaintext highlighter-rouge">gemini-3.5-flash-lite</code></li>
+  <li><code class="language-plaintext highlighter-rouge">/gemini fix</code>: <code class="language-plaintext highlighter-rouge">gemini-3.8-flash</code></li>
+  <li>Eingabe über 20 000 Zeichen (Frage plus Kontext): <code class="language-plaintext highlighter-rouge">gemini-4-argon</code></li>
+</ul>
+
+<p>Die Modell-IDs stehen unter https://ai.google.dev/gemini-api/docs/models. Zum Ändern die Konstanten in <code class="language-plaintext highlighter-rouge">MODELS</code> und die Schwelle <code class="language-plaintext highlighter-rouge">COMPLEX_CHARS</code> anpassen.</p>
 
 <h2 id="github-gemini">GitHub: <code class="language-plaintext highlighter-rouge">/gemini</code></h2>
 

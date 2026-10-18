@@ -3,8 +3,11 @@ import assert from 'node:assert/strict';
 import {
   applyEdits,
   buildPrompt,
+  chooseModel,
+  COMPLEX_CHARS,
   MAX_EDITS,
   MAX_FILE_CHARS,
+  MODELS,
   parseCommand,
   parseEdits,
   ProposalError,
@@ -23,6 +26,24 @@ test('parseCommand recognises question and fix mode', () => {
   assert.deepEqual(parseCommand('/gemini fix'), { propose: true, task: '' });
   assert.deepEqual(parseCommand('/gemini fixing things'), { propose: false, task: 'fixing things' });
   assert.equal(parseCommand('hello /gemini'), null);
+});
+
+test('chooseModel uses the cheapest model for short questions', () => {
+  assert.equal(chooseModel({ task: 'Kurze Frage?' }), MODELS.cheap);
+});
+
+test('chooseModel uses the standard model for fix proposals', () => {
+  assert.equal(chooseModel({ task: 'Typo beheben', files: [{ path: 'README.md', content: 'x' }], propose: true }), MODELS.standard);
+});
+
+test('chooseModel uses the flagship model above the complexity threshold', () => {
+  const big = [{ path: 'README.md', content: 'x'.repeat(COMPLEX_CHARS) }];
+  assert.equal(chooseModel({ task: 'Frage', files: big }), MODELS.flagship);
+  assert.equal(chooseModel({ task: 'Fix', files: big, propose: true }), MODELS.flagship);
+});
+
+test('chooseModel counts the task text towards the threshold', () => {
+  assert.equal(chooseModel({ task: 'x'.repeat(COMPLEX_CHARS + 1) }), MODELS.flagship);
 });
 
 test('buildPrompt rejects context that exceeds the limit', () => {
