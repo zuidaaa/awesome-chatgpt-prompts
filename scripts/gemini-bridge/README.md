@@ -6,7 +6,13 @@ Gemini als zweiter Mitarbeiter im Projekt: über GitHub-Kommentare oder lokal im
 
 1. **Secret** `GEMINI_API_KEY` unter *Settings → Secrets and variables → Actions* anlegen.
 
-Das Modell ist im Code fest auf `gemini-4-argon` gesetzt (`MODEL` in `bridge.mjs`), geprüft gegen https://ai.google.dev/gemini-api/docs/models. Zum Wechseln die Konstante ändern.
+Die Modellwahl richtet sich nach der Eingabegröße (`chooseModel` in `lib.mjs`), sparsam als Standard:
+
+- Kurze Fragen: `gemini-3.5-flash-lite`
+- `/gemini fix`: `gemini-3.8-flash`
+- Eingabe über 20 000 Zeichen (Frage plus Kontext): `gemini-4-argon`
+
+Die Modell-IDs stehen unter https://ai.google.dev/gemini-api/docs/models. Zum Ändern die Konstanten in `MODELS` und die Schwelle `COMPLEX_CHARS` anpassen.
 
 ## GitHub: `/gemini`
 
