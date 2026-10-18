@@ -2,15 +2,18 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   applyEdits,
+  buildContext,
   buildPrompt,
   chooseModel,
   COMPLEX_CHARS,
+  MAX_DIFF_CHARS,
   MAX_EDITS,
   MAX_FILE_CHARS,
   MODELS,
   parseCommand,
   parseEdits,
   ProposalError,
+  README_EXCERPT_CHARS,
   VERY_COMPLEX_CHARS,
 } from './lib.mjs';
 
@@ -59,6 +62,31 @@ test('chooseModel uses the flagship for a large fix but not a large review', () 
 test('chooseModel counts the task text towards the size band', () => {
   assert.equal(chooseModel({ mode: 'answer', task: 'x'.repeat(COMPLEX_CHARS + 1) }), MODELS.standard);
   assert.equal(chooseModel({ mode: 'answer', task: 'x'.repeat(VERY_COMPLEX_CHARS + 1) }), MODELS.flagship);
+});
+
+test('buildContext gives fix mode every allowlisted file as-is', () => {
+  const allowedFiles = [{ path: 'README.md', content: 'x' }];
+  assert.deepEqual(buildContext({ mode: 'fix', allowedFiles }), { files: allowedFiles });
+});
+
+test('buildContext gives answer mode the contributing guide and a trimmed README', () => {
+  const readme = 'x'.repeat(README_EXCERPT_CHARS + 100);
+  const result = buildContext({ mode: 'answer', contributing: 'Guide', readme });
+  assert.deepEqual(result.files[0], { path: 'CONTRIBUTING.md', content: 'Guide' });
+  assert.equal(result.files[1].path, 'README.md (Auszug)');
+  assert.equal(result.files[1].content.length, README_EXCERPT_CHARS);
+});
+
+test('buildContext gives review mode a trimmed diff', () => {
+  const diff = 'x'.repeat(MAX_DIFF_CHARS + 100);
+  const result = buildContext({ mode: 'review', diff });
+  assert.equal(result.files[0].path, 'pr.diff');
+  assert.equal(result.files[0].content.length, MAX_DIFF_CHARS);
+});
+
+test('buildContext rejects review mode without a diff', () => {
+  assert.equal(buildContext({ mode: 'review', diff: '' }).error, '❌ `/gemini review` funktioniert nur in Pull Requests.');
+  assert.ok(buildContext({ mode: 'review' }).error);
 });
 
 test('buildPrompt rejects context that exceeds the limit', () => {

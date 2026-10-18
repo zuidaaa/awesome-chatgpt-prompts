@@ -50,6 +50,6 @@ Die Tests brauchen kein Netz und keinen API-Key.
 
 ## Dateien
 
-- `lib.mjs`: reine Logik (Befehl parsen, Prompt bauen, Edits validieren)
+- `lib.mjs`: reine Logik (Befehl parsen, Kontext pro Modus bauen, Prompt bauen, Edits validieren)
 - `bridge.mjs`: Gemini-Client per `fetch` (keine npm-Abhängigkeit) und lokale CLI
 - `bot.mjs`: Einstiegspunkt für den Workflow
