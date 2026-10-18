@@ -6,7 +6,7 @@
 import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { askGemini } from './bridge.mjs';
-import { ALLOWED_PATHS, applyEdits, buildContext, formatUsage, parseCommand, parseEdits, ProposalError } from './lib.mjs';
+import { applyEdits, buildContext, formatUsage, parseCommand, parseEdits, ProposalError, selectFixPaths } from './lib.mjs';
 
 const FOOTER = '---\n_Generiert mit Gemini über die Repo-Bridge (`/gemini`). Vor dem Übernehmen bitte prüfen._';
 const SUMMARY_MAX_CHARS = 70;
@@ -23,7 +23,7 @@ async function handle(outDir) {
   const propose = command.mode === 'fix';
 
   const allowedFiles = propose
-    ? await Promise.all(ALLOWED_PATHS.map(async (path) => ({ path, content: await readFile(path, 'utf8') })))
+    ? await Promise.all(selectFixPaths(command.task).map(async (path) => ({ path, content: await readFile(path, 'utf8') })))
     : [];
   const contributing = command.mode === 'answer' ? await readFile('CONTRIBUTING.md', 'utf8') : '';
   const readme = command.mode === 'answer' ? await readFile('README.md', 'utf8') : '';

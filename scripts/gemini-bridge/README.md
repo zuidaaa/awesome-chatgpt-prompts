@@ -14,6 +14,8 @@ Die Modellwahl richtet sich nach drei Faktoren (`chooseModel` in `lib.mjs`): dem
 | Review (`/gemini review`) | `gemini-3.8-flash` | `gemini-3.8-flash` | `gemini-4-argon` |
 | Fix (`/gemini fix`) | `gemini-3.8-flash` | `gemini-4-argon` | `gemini-4-argon` |
 
+Bei `fix` zählt nur die Länge des Auftrags. Die mitgeschickten Dateien zählen nicht, weil schon `README.md` und `prompts.csv` allein über 100 000 Zeichen haben. Sonst bekäme jeder Fix das Flagship-Modell. Ein normaler Fix läuft damit auf `gemini-3.8-flash`. Gemini muss für einen Fix keine ganze Datei schreiben, sondern nur einzelne Stellen ersetzen. Jede Ersetzung wird geprüft: Der gesuchte Text muss genau einmal vorkommen. Ein ungenauer Vorschlag wird verworfen und nicht übernommen.
+
 Die Modell-IDs stehen unter https://ai.google.dev/gemini-api/docs/models. Zum Ändern die Konstanten in `MODELS`, die Tabelle `MODEL_MATRIX` und die Schwellen `COMPLEX_CHARS` und `VERY_COMPLEX_CHARS` anpassen.
 
 ## GitHub: `/gemini`
@@ -22,7 +24,7 @@ Kommentar in einem Issue oder PR (nur Owner, Member und Collaborator):
 
 - `/gemini <Frage>`: Gemini antwortet als Kommentar. Kontext sind `CONTRIBUTING.md` und der Anfang der `README.md` (6 000 Zeichen). Kein Diff.
 - `/gemini review <Frage>`: Wie oben, aber mit dem PR-Diff als Kontext. Funktioniert nur in Pull Requests. Gefundene Probleme kommen nach Schwere sortiert, mit Datei und Zeile, höchstens fünf.
-- `/gemini fix <Auftrag>`: Gemini schlägt Änderungen an `README.md`, `prompts.csv` oder `CONTRIBUTING.md` vor. Die Änderungen landen auf einer Branch `gemini/<nr>-<run>` als **Draft-PR**. Gemergt wird nur von Hand.
+- `/gemini fix <Auftrag>`: Gemini schlägt Änderungen an `README.md`, `prompts.csv` oder `CONTRIBUTING.md` vor. Nennt der Auftrag eine dieser Dateien („README“, „csv“, „CONTRIBUTING“), wird nur diese mitgeschickt. Das spart Input-Tokens. Nennt er keine, gehen alle drei mit, etwa für „neuen Prompt hinzufügen“, der laut `CONTRIBUTING.md` in README und CSV gehört. Die Änderungen landen auf einer Branch `gemini/<nr>-<run>` als **Draft-PR**. Gemergt wird nur von Hand.
 
 Der Workflow ist `.github/workflows/gemini_bot.yml`. Er checkt nur den Default-Branch aus, nie den PR-Head.
 

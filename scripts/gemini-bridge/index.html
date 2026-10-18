@@ -21,7 +21,7 @@
 {"@context":"https://schema.org","@type":"WebPage","description":"This repo includes ChatGPT prompt curation to use ChatGPT and other LLM tools better.","headline":"Gemini-Bridge","url":"/scripts/gemini-bridge/"}</script>
 <!-- End Jekyll SEO tag -->
 
-    <link rel="stylesheet" href="/assets/css/style.css?v=af914b8805ccdee19e45b52df4e6ab12008e0735">
+    <link rel="stylesheet" href="/assets/css/style.css?v=e065886e7b2ead746bd9c7381d0732f496f7a9d7">
     <style>
       :root {
         --bg-color-light: #ffffff;
@@ -1014,6 +1014,8 @@
   </tbody>
 </table>
 
+<p>Bei <code class="language-plaintext highlighter-rouge">fix</code> zählt nur die Länge des Auftrags. Die mitgeschickten Dateien zählen nicht, weil schon <code class="language-plaintext highlighter-rouge">README.md</code> und <code class="language-plaintext highlighter-rouge">prompts.csv</code> allein über 100 000 Zeichen haben. Sonst bekäme jeder Fix das Flagship-Modell. Ein normaler Fix läuft damit auf <code class="language-plaintext highlighter-rouge">gemini-3.8-flash</code>. Gemini muss für einen Fix keine ganze Datei schreiben, sondern nur einzelne Stellen ersetzen. Jede Ersetzung wird geprüft: Der gesuchte Text muss genau einmal vorkommen. Ein ungenauer Vorschlag wird verworfen und nicht übernommen.</p>
+
 <p>Die Modell-IDs stehen unter https://ai.google.dev/gemini-api/docs/models. Zum Ändern die Konstanten in <code class="language-plaintext highlighter-rouge">MODELS</code>, die Tabelle <code class="language-plaintext highlighter-rouge">MODEL_MATRIX</code> und die Schwellen <code class="language-plaintext highlighter-rouge">COMPLEX_CHARS</code> und <code class="language-plaintext highlighter-rouge">VERY_COMPLEX_CHARS</code> anpassen.</p>
 
 <h2 id="github-gemini">GitHub: <code class="language-plaintext highlighter-rouge">/gemini</code></h2>
@@ -1023,7 +1025,7 @@
 <ul>
   <li><code class="language-plaintext highlighter-rouge">/gemini &lt;Frage&gt;</code>: Gemini antwortet als Kommentar. Kontext sind <code class="language-plaintext highlighter-rouge">CONTRIBUTING.md</code> und der Anfang der <code class="language-plaintext highlighter-rouge">README.md</code> (6 000 Zeichen). Kein Diff.</li>
   <li><code class="language-plaintext highlighter-rouge">/gemini review &lt;Frage&gt;</code>: Wie oben, aber mit dem PR-Diff als Kontext. Funktioniert nur in Pull Requests. Gefundene Probleme kommen nach Schwere sortiert, mit Datei und Zeile, höchstens fünf.</li>
-  <li><code class="language-plaintext highlighter-rouge">/gemini fix &lt;Auftrag&gt;</code>: Gemini schlägt Änderungen an <code class="language-plaintext highlighter-rouge">README.md</code>, <code class="language-plaintext highlighter-rouge">prompts.csv</code> oder <code class="language-plaintext highlighter-rouge">CONTRIBUTING.md</code> vor. Die Änderungen landen auf einer Branch <code class="language-plaintext highlighter-rouge">gemini/&lt;nr&gt;-&lt;run&gt;</code> als <strong>Draft-PR</strong>. Gemergt wird nur von Hand.</li>
+  <li><code class="language-plaintext highlighter-rouge">/gemini fix &lt;Auftrag&gt;</code>: Gemini schlägt Änderungen an <code class="language-plaintext highlighter-rouge">README.md</code>, <code class="language-plaintext highlighter-rouge">prompts.csv</code> oder <code class="language-plaintext highlighter-rouge">CONTRIBUTING.md</code> vor. Nennt der Auftrag eine dieser Dateien („README“, „csv“, „CONTRIBUTING“), wird nur diese mitgeschickt. Das spart Input-Tokens. Nennt er keine, gehen alle drei mit, etwa für „neuen Prompt hinzufügen“, der laut <code class="language-plaintext highlighter-rouge">CONTRIBUTING.md</code> in README und CSV gehört. Die Änderungen landen auf einer Branch <code class="language-plaintext highlighter-rouge">gemini/&lt;nr&gt;-&lt;run&gt;</code> als <strong>Draft-PR</strong>. Gemergt wird nur von Hand.</li>
 </ul>
 
 <p>Der Workflow ist <code class="language-plaintext highlighter-rouge">.github/workflows/gemini_bot.yml</code>. Er checkt nur den Default-Branch aus, nie den PR-Head.</p>
