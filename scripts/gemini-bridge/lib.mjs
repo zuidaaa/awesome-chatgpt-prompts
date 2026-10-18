@@ -71,6 +71,27 @@ Regeln:
 - "search" muss im Dateiinhalt genau einmal vorkommen. Nimm genug Kontext dazu, aber so wenig wie möglich.
 - Ändere nur, was der Auftrag verlangt.`;
 
+// Adapted from PAL MCP Server, systemprompts/clink/default_codereviewer.txt (Apache-2.0).
+// The caps keep review answers short, which also keeps output tokens down.
+export const REVIEW_FORMAT = `Du bekommst den Diff eines Pull Requests. Beantworte den Auftrag anhand dieses Diffs.
+Wenn du Probleme nennst:
+- Sortiere sie nach Schwere (Kritisch, Hoch, Mittel, Niedrig): Sicherheit, Korrektheit, Wartbarkeit.
+- Belege jedes mit Datei und Zeile oder Symbol aus dem Diff, nenne die Auswirkung und eine konkrete Lösung.
+- Höchstens 5 Punkte, keine langen Code-Auszüge.
+Nenne kurz, was gut ist und bleiben sollte. Schließe mit einer Zusammenfassung in höchstens 3 Sätzen.`;
+
+// One line for the reply footer and the CLI, e.g. "_Modell: `x` · Tokens: 120 ein · 40 aus · 160 gesamt_".
+export function formatUsage({ model, usage = {} }) {
+  const parts = [`Modell: \`${model}\``];
+  const counts = [
+    [usage.input, 'ein'],
+    [usage.output, 'aus'],
+    [usage.total, 'gesamt'],
+  ].filter(([value]) => value != null);
+  if (counts.length) parts.push(`Tokens: ${counts.map(([value, label]) => `${value} ${label}`).join(' · ')}`);
+  return `_${parts.join(' · ')}_`;
+}
+
 export class ProposalError extends Error {
   name = 'ProposalError';
 }
