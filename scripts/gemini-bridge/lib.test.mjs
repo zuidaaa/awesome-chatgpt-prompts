@@ -11,6 +11,7 @@ import {
   parseCommand,
   parseEdits,
   ProposalError,
+  VERY_COMPLEX_CHARS,
 } from './lib.mjs';
 
 const files = new Map([
@@ -30,22 +31,34 @@ test('parseCommand recognises answer, review and fix modes', () => {
   assert.equal(parseCommand('hello /gemini'), null);
 });
 
-test('chooseModel uses the cheapest model for short questions', () => {
+const sized = (chars) => [{ path: 'README.md', content: 'x'.repeat(chars) }];
+
+test('chooseModel uses the cheapest model for a short question', () => {
+  assert.equal(chooseModel({ mode: 'answer', task: 'Kurze Frage?' }), MODELS.cheap);
   assert.equal(chooseModel({ task: 'Kurze Frage?' }), MODELS.cheap);
 });
 
-test('chooseModel uses the standard model for fix proposals', () => {
-  assert.equal(chooseModel({ task: 'Typo beheben', files: [{ path: 'README.md', content: 'x' }], propose: true }), MODELS.standard);
+test('chooseModel uses the standard model for a review of a small diff', () => {
+  assert.equal(chooseModel({ mode: 'review', task: 'Prüfen', files: sized(1_000) }), MODELS.standard);
 });
 
-test('chooseModel uses the flagship model above the complexity threshold', () => {
-  const big = [{ path: 'README.md', content: 'x'.repeat(COMPLEX_CHARS) }];
-  assert.equal(chooseModel({ task: 'Frage', files: big }), MODELS.flagship);
-  assert.equal(chooseModel({ task: 'Fix', files: big, propose: true }), MODELS.flagship);
+test('chooseModel uses the standard model for a small fix', () => {
+  assert.equal(chooseModel({ mode: 'fix', task: 'Typo beheben', files: sized(1_000) }), MODELS.standard);
 });
 
-test('chooseModel counts the task text towards the threshold', () => {
-  assert.equal(chooseModel({ task: 'x'.repeat(COMPLEX_CHARS + 1) }), MODELS.flagship);
+test('chooseModel moves a large answer up to standard and a very large one to flagship', () => {
+  assert.equal(chooseModel({ mode: 'answer', task: 'Frage', files: sized(COMPLEX_CHARS) }), MODELS.standard);
+  assert.equal(chooseModel({ mode: 'answer', task: 'Frage', files: sized(VERY_COMPLEX_CHARS) }), MODELS.flagship);
+});
+
+test('chooseModel uses the flagship for a large fix but not a large review', () => {
+  assert.equal(chooseModel({ mode: 'fix', task: 'Fix', files: sized(COMPLEX_CHARS) }), MODELS.flagship);
+  assert.equal(chooseModel({ mode: 'review', task: 'Prüfen', files: sized(COMPLEX_CHARS) }), MODELS.standard);
+});
+
+test('chooseModel counts the task text towards the size band', () => {
+  assert.equal(chooseModel({ mode: 'answer', task: 'x'.repeat(COMPLEX_CHARS + 1) }), MODELS.standard);
+  assert.equal(chooseModel({ mode: 'answer', task: 'x'.repeat(VERY_COMPLEX_CHARS + 1) }), MODELS.flagship);
 });
 
 test('buildPrompt rejects context that exceeds the limit', () => {
