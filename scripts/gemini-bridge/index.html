@@ -21,7 +21,7 @@
 {"@context":"https://schema.org","@type":"WebPage","description":"This repo includes ChatGPT prompt curation to use ChatGPT and other LLM tools better.","headline":"Gemini-Bridge","url":"/scripts/gemini-bridge/"}</script>
 <!-- End Jekyll SEO tag -->
 
-    <link rel="stylesheet" href="/assets/css/style.css?v=dbb7c36197914bd48c59569479926ef3fa9cf39e">
+    <link rel="stylesheet" href="/assets/css/style.css?v=cfce71f7bf63ef35650fd06b52844c55d5705cab">
     <style>
       :root {
         --bg-color-light: #ffffff;
@@ -981,15 +981,40 @@
   <li><strong>Secret</strong> <code class="language-plaintext highlighter-rouge">GEMINI_API_KEY</code> unter <em>Settings → Secrets and variables → Actions</em> anlegen.</li>
 </ol>
 
-<p>Die Modellwahl richtet sich nach der Eingabegröße (<code class="language-plaintext highlighter-rouge">chooseModel</code> in <code class="language-plaintext highlighter-rouge">lib.mjs</code>), sparsam als Standard:</p>
+<p>Die Modellwahl richtet sich nach drei Faktoren (<code class="language-plaintext highlighter-rouge">chooseModel</code> in <code class="language-plaintext highlighter-rouge">lib.mjs</code>): dem Vorhaben (Befehl), der Komplexität (Größe von Frage plus Kontext) und sparsam als Standard.</p>
 
-<ul>
-  <li>Kurze Fragen: <code class="language-plaintext highlighter-rouge">gemini-3.5-flash-lite</code></li>
-  <li><code class="language-plaintext highlighter-rouge">/gemini fix</code>: <code class="language-plaintext highlighter-rouge">gemini-3.8-flash</code></li>
-  <li>Eingabe über 20 000 Zeichen (Frage plus Kontext): <code class="language-plaintext highlighter-rouge">gemini-4-argon</code></li>
-</ul>
+<table>
+  <thead>
+    <tr>
+      <th>Vorhaben</th>
+      <th>klein (≤ 20 000 Zeichen)</th>
+      <th>groß (≤ 100 000)</th>
+      <th>sehr groß</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Frage (<code class="language-plaintext highlighter-rouge">/gemini</code>)</td>
+      <td><code class="language-plaintext highlighter-rouge">gemini-3.5-flash-lite</code></td>
+      <td><code class="language-plaintext highlighter-rouge">gemini-3.8-flash</code></td>
+      <td><code class="language-plaintext highlighter-rouge">gemini-4-argon</code></td>
+    </tr>
+    <tr>
+      <td>Review (<code class="language-plaintext highlighter-rouge">/gemini review</code>)</td>
+      <td><code class="language-plaintext highlighter-rouge">gemini-3.8-flash</code></td>
+      <td><code class="language-plaintext highlighter-rouge">gemini-3.8-flash</code></td>
+      <td><code class="language-plaintext highlighter-rouge">gemini-4-argon</code></td>
+    </tr>
+    <tr>
+      <td>Fix (<code class="language-plaintext highlighter-rouge">/gemini fix</code>)</td>
+      <td><code class="language-plaintext highlighter-rouge">gemini-3.8-flash</code></td>
+      <td><code class="language-plaintext highlighter-rouge">gemini-4-argon</code></td>
+      <td><code class="language-plaintext highlighter-rouge">gemini-4-argon</code></td>
+    </tr>
+  </tbody>
+</table>
 
-<p>Die Modell-IDs stehen unter https://ai.google.dev/gemini-api/docs/models. Zum Ändern die Konstanten in <code class="language-plaintext highlighter-rouge">MODELS</code> und die Schwelle <code class="language-plaintext highlighter-rouge">COMPLEX_CHARS</code> anpassen.</p>
+<p>Die Modell-IDs stehen unter https://ai.google.dev/gemini-api/docs/models. Zum Ändern die Konstanten in <code class="language-plaintext highlighter-rouge">MODELS</code>, die Tabelle <code class="language-plaintext highlighter-rouge">MODEL_MATRIX</code> und die Schwellen <code class="language-plaintext highlighter-rouge">COMPLEX_CHARS</code> und <code class="language-plaintext highlighter-rouge">VERY_COMPLEX_CHARS</code> anpassen.</p>
 
 <h2 id="github-gemini">GitHub: <code class="language-plaintext highlighter-rouge">/gemini</code></h2>
 
