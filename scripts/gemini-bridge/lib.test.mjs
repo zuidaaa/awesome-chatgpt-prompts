@@ -6,6 +6,7 @@ import {
   buildPrompt,
   chooseModel,
   COMPLEX_CHARS,
+  formatUsage,
   MAX_DIFF_CHARS,
   MAX_EDITS,
   MAX_FILE_CHARS,
@@ -87,6 +88,14 @@ test('buildContext gives review mode a trimmed diff', () => {
 test('buildContext rejects review mode without a diff', () => {
   assert.equal(buildContext({ mode: 'review', diff: '' }).error, '❌ `/gemini review` funktioniert nur in Pull Requests.');
   assert.ok(buildContext({ mode: 'review' }).error);
+});
+
+test('formatUsage shows the model and every reported token count', () => {
+  assert.equal(
+    formatUsage({ model: 'gemini-x', usage: { input: 120, output: 40, total: 175 } }),
+    '_Modell: `gemini-x` · Tokens: 120 ein · 40 aus · 175 gesamt_',
+  );
+  assert.equal(formatUsage({ model: 'gemini-x', usage: { input: null, output: null, total: null } }), '_Modell: `gemini-x`_');
 });
 
 test('buildPrompt rejects context that exceeds the limit', () => {
