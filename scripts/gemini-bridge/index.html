@@ -21,7 +21,7 @@
 {"@context":"https://schema.org","@type":"WebPage","description":"This repo includes ChatGPT prompt curation to use ChatGPT and other LLM tools better.","headline":"Gemini-Bridge","url":"/scripts/gemini-bridge/"}</script>
 <!-- End Jekyll SEO tag -->
 
-    <link rel="stylesheet" href="/assets/css/style.css?v=a194e795e2fed1daac02e3341973c2c290bdb0fa">
+    <link rel="stylesheet" href="/assets/css/style.css?v=af914b8805ccdee19e45b52df4e6ab12008e0735">
     <style>
       :root {
         --bg-color-light: #ffffff;
@@ -1022,11 +1022,17 @@
 
 <ul>
   <li><code class="language-plaintext highlighter-rouge">/gemini &lt;Frage&gt;</code>: Gemini antwortet als Kommentar. Kontext sind <code class="language-plaintext highlighter-rouge">CONTRIBUTING.md</code> und der Anfang der <code class="language-plaintext highlighter-rouge">README.md</code> (6 000 Zeichen). Kein Diff.</li>
-  <li><code class="language-plaintext highlighter-rouge">/gemini review &lt;Frage&gt;</code>: Wie oben, aber mit dem PR-Diff als Kontext. Funktioniert nur in Pull Requests.</li>
+  <li><code class="language-plaintext highlighter-rouge">/gemini review &lt;Frage&gt;</code>: Wie oben, aber mit dem PR-Diff als Kontext. Funktioniert nur in Pull Requests. Gefundene Probleme kommen nach Schwere sortiert, mit Datei und Zeile, höchstens fünf.</li>
   <li><code class="language-plaintext highlighter-rouge">/gemini fix &lt;Auftrag&gt;</code>: Gemini schlägt Änderungen an <code class="language-plaintext highlighter-rouge">README.md</code>, <code class="language-plaintext highlighter-rouge">prompts.csv</code> oder <code class="language-plaintext highlighter-rouge">CONTRIBUTING.md</code> vor. Die Änderungen landen auf einer Branch <code class="language-plaintext highlighter-rouge">gemini/&lt;nr&gt;-&lt;run&gt;</code> als <strong>Draft-PR</strong>. Gemergt wird nur von Hand.</li>
 </ul>
 
 <p>Der Workflow ist <code class="language-plaintext highlighter-rouge">.github/workflows/gemini_bot.yml</code>. Er checkt nur den Default-Branch aus, nie den PR-Head.</p>
+
+<p>Jede Antwort, die Gemini erreicht hat, endet mit dem gewählten Modell und dem Token-Verbrauch, den Gemini meldet. Das gilt auch, wenn ein Vorschlag verworfen wird, denn die Tokens sind dann schon verbraucht.</p>
+
+<h3 id="fehler-und-wiederholungen">Fehler und Wiederholungen</h3>
+
+<p>Vorübergehende Fehler wiederholt die Bridge bis zu viermal, mit Pausen von 1, 3 und 5 Sekunden. Vorübergehend sind Netzwerkfehler, Zeitüberschreitung (120 s), 408, 5xx und 429 ohne Hinweis auf ein erschöpftes Kontingent. Sofort abgebrochen wird bei ungültigem Key (400), fehlendem Guthaben (402), Sperre (403) und erschöpftem Kontingent. Ein gesperrter Prompt wird mit <code class="language-plaintext highlighter-rouge">blockReason</code> gemeldet.</p>
 
 <h3 id="grenzen">Grenzen</h3>
 
@@ -1043,6 +1049,8 @@
 
 <p>Das Skript schreibt nie Dateien. Mit <code class="language-plaintext highlighter-rouge">--propose</code> wird der rohe Edit-Vorschlag ausgegeben.</p>
 
+<p>Die Antwort steht auf stdout, Modell und Token-Verbrauch auf stderr. So kann ein anderes Werkzeug, etwa Claude Code, Gemini eine große Datei lesen lassen und bekommt nur die kurze Antwort in seinen Kontext.</p>
+
 <h2 id="tests">Tests</h2>
 
 <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>node <span class="nt">--test</span> scripts/gemini-bridge/lib.test.mjs scripts/gemini-bridge/bridge.test.mjs
@@ -1057,6 +1065,10 @@
   <li><code class="language-plaintext highlighter-rouge">bridge.mjs</code>: Gemini-Client per <code class="language-plaintext highlighter-rouge">fetch</code> (keine npm-Abhängigkeit) und lokale CLI</li>
   <li><code class="language-plaintext highlighter-rouge">bot.mjs</code>: Einstiegspunkt für den Workflow</li>
 </ul>
+
+<h2 id="übernommene-muster">Übernommene Muster</h2>
+
+<p>Retry-Logik und Fehlereinteilung (<code class="language-plaintext highlighter-rouge">bridge.mjs</code>) sowie die Review-Anweisung (<code class="language-plaintext highlighter-rouge">REVIEW_FORMAT</code> in <code class="language-plaintext highlighter-rouge">lib.mjs</code>) sind angelehnt an den <a href="https://github.com/BeehiveInnovations/pal-mcp-server">PAL MCP Server</a> (<code class="language-plaintext highlighter-rouge">providers/gemini.py</code>, <code class="language-plaintext highlighter-rouge">systemprompts/clink/default_codereviewer.txt</code>, Stand Commit <code class="language-plaintext highlighter-rouge">7afc7c1</code>). Der steht unter der <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>. Der Code wurde nicht kopiert, sondern als Muster nach JavaScript übertragen und angepasst.</p>
 
 
       
