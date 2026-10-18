@@ -35,11 +35,12 @@ export class ProposalError extends Error {
   name = 'ProposalError';
 }
 
-// "/gemini <Frage>" or "/gemini fix <Auftrag>". Returns null if the text is not a command.
+// "/gemini <Frage>" (answer), "/gemini review <Frage>" (answer with PR diff), "/gemini fix <Auftrag>" (edits).
+// Returns null if the text is not a command.
 export function parseCommand(body) {
-  const match = body.trim().match(/^\/gemini(?:\s+(fix)\b)?\s*([\s\S]*)$/);
+  const match = body.trim().match(/^\/gemini(?:\s+(fix|review)\b)?\s*([\s\S]*)$/);
   if (!match) return null;
-  return { propose: Boolean(match[1]), task: match[2].trim() };
+  return { mode: match[1] ?? 'answer', task: match[2].trim() };
 }
 
 export function buildPrompt({ task, files = [] }) {

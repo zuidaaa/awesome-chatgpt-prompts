@@ -20,11 +20,13 @@ const files = new Map([
 
 const edit = (overrides) => ({ summary: 'Test', edits: [{ path: 'README.md', search: 'Alpha line', replace: 'Gamma line', ...overrides }] });
 
-test('parseCommand recognises question and fix mode', () => {
-  assert.deepEqual(parseCommand('/gemini what is this?'), { propose: false, task: 'what is this?' });
-  assert.deepEqual(parseCommand('/gemini fix add a typo fix'), { propose: true, task: 'add a typo fix' });
-  assert.deepEqual(parseCommand('/gemini fix'), { propose: true, task: '' });
-  assert.deepEqual(parseCommand('/gemini fixing things'), { propose: false, task: 'fixing things' });
+test('parseCommand recognises answer, review and fix modes', () => {
+  assert.deepEqual(parseCommand('/gemini what is this?'), { mode: 'answer', task: 'what is this?' });
+  assert.deepEqual(parseCommand('/gemini review check the diff'), { mode: 'review', task: 'check the diff' });
+  assert.deepEqual(parseCommand('/gemini fix add a typo fix'), { mode: 'fix', task: 'add a typo fix' });
+  assert.deepEqual(parseCommand('/gemini fix'), { mode: 'fix', task: '' });
+  assert.deepEqual(parseCommand('/gemini fixing things'), { mode: 'answer', task: 'fixing things' });
+  assert.deepEqual(parseCommand('/gemini reviewing things'), { mode: 'answer', task: 'reviewing things' });
   assert.equal(parseCommand('hello /gemini'), null);
 });
 

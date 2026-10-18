@@ -18,7 +18,8 @@ Die Modell-IDs stehen unter https://ai.google.dev/gemini-api/docs/models. Zum Ä
 
 Kommentar in einem Issue oder PR (nur Owner, Member und Collaborator):
 
-- `/gemini <Frage>`: Gemini antwortet als Kommentar. Bei PRs wird der Diff als Kontext mitgegeben.
+- `/gemini <Frage>`: Gemini antwortet als Kommentar. Kontext sind `CONTRIBUTING.md` und der Anfang der `README.md` (6 000 Zeichen). Kein Diff.
+- `/gemini review <Frage>`: Wie oben, aber mit dem PR-Diff als Kontext. Funktioniert nur in Pull Requests.
 - `/gemini fix <Auftrag>`: Gemini schlägt Änderungen an `README.md`, `prompts.csv` oder `CONTRIBUTING.md` vor. Die Änderungen landen auf einer Branch `gemini/<nr>-<run>` als **Draft-PR**. Gemergt wird nur von Hand.
 
 Der Workflow ist `.github/workflows/gemini_bot.yml`. Er checkt nur den Default-Branch aus, nie den PR-Head.
