@@ -21,7 +21,7 @@
 {"@context":"https://schema.org","@type":"WebPage","description":"This repo includes ChatGPT prompt curation to use ChatGPT and other LLM tools better.","headline":"Gemini-Bridge","url":"/scripts/gemini-bridge/"}</script>
 <!-- End Jekyll SEO tag -->
 
-    <link rel="stylesheet" href="/assets/css/style.css?v=1f86ee3aec4f3c7421f7e8ab0cc28e37fcc5fc55">
+    <link rel="stylesheet" href="/assets/css/style.css?v=dbb7c36197914bd48c59569479926ef3fa9cf39e">
     <style>
       :root {
         --bg-color-light: #ffffff;
@@ -996,7 +996,8 @@
 <p>Kommentar in einem Issue oder PR (nur Owner, Member und Collaborator):</p>
 
 <ul>
-  <li><code class="language-plaintext highlighter-rouge">/gemini &lt;Frage&gt;</code>: Gemini antwortet als Kommentar. Bei PRs wird der Diff als Kontext mitgegeben.</li>
+  <li><code class="language-plaintext highlighter-rouge">/gemini &lt;Frage&gt;</code>: Gemini antwortet als Kommentar. Kontext sind <code class="language-plaintext highlighter-rouge">CONTRIBUTING.md</code> und der Anfang der <code class="language-plaintext highlighter-rouge">README.md</code> (6 000 Zeichen). Kein Diff.</li>
+  <li><code class="language-plaintext highlighter-rouge">/gemini review &lt;Frage&gt;</code>: Wie oben, aber mit dem PR-Diff als Kontext. Funktioniert nur in Pull Requests.</li>
   <li><code class="language-plaintext highlighter-rouge">/gemini fix &lt;Auftrag&gt;</code>: Gemini schlägt Änderungen an <code class="language-plaintext highlighter-rouge">README.md</code>, <code class="language-plaintext highlighter-rouge">prompts.csv</code> oder <code class="language-plaintext highlighter-rouge">CONTRIBUTING.md</code> vor. Die Änderungen landen auf einer Branch <code class="language-plaintext highlighter-rouge">gemini/&lt;nr&gt;-&lt;run&gt;</code> als <strong>Draft-PR</strong>. Gemergt wird nur von Hand.</li>
 </ul>
 
