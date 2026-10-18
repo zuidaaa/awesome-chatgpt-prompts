@@ -45,7 +45,7 @@ async function handle(outDir) {
     if (diff) files.push({ path: 'pr.diff', content: diff });
   }
 
-  const answer = await askGemini({ task: command.task, files, propose });
+  const answer = await askGemini({ task: command.task, files, mode: command.mode });
   if (!propose) return { text: answer };
 
   const proposal = parseEdits(answer);

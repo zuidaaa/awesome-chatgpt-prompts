@@ -42,11 +42,12 @@ export async function generate({ apiKey, model, system, prompt, fetchImpl = fetc
   return text;
 }
 
-// Reads GEMINI_API_KEY from the environment. The model is chosen by input size, see chooseModel in lib.mjs.
-export async function askGemini({ task, files = [], propose = false, fetchImpl }) {
+// Reads GEMINI_API_KEY from the environment. The model is chosen by mode and input size, see chooseModel in lib.mjs.
+export async function askGemini({ task, files = [], mode = 'answer', fetchImpl }) {
+  const propose = mode === 'fix';
   return generate({
     apiKey: requireEnv('GEMINI_API_KEY'),
-    model: chooseModel({ task, files, propose }),
+    model: chooseModel({ mode, task, files }),
     system: propose ? `${SYSTEM}\n\n${PROPOSAL_FORMAT}` : SYSTEM,
     prompt: buildPrompt({ task, files }),
     fetchImpl,
@@ -75,7 +76,7 @@ async function main() {
   const context = await Promise.all(
     files.map(async (path) => ({ path, content: await readFile(path, 'utf8') })),
   );
-  console.log(await askGemini({ task, files: context, propose }));
+  console.log(await askGemini({ task, files: context, mode: propose ? 'fix' : 'answer' }));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

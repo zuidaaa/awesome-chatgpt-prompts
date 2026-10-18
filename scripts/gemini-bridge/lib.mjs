@@ -13,14 +13,30 @@ export const MODELS = {
   standard: 'gemini-3.8-flash',
   flagship: 'gemini-4-argon',
 };
-// Above this input size the flagship model is used. Below it, the cheapest model answers questions.
+// Input size bands (task text plus all context). Above COMPLEX_CHARS the input is "large",
+// above VERY_COMPLEX_CHARS it is "very large".
 export const COMPLEX_CHARS = 20_000;
+export const VERY_COMPLEX_CHARS = 100_000;
 
-// Cheapest model by default. Edits get the standard model, very large inputs get the flagship.
-export function chooseModel({ task, files = [], propose = false }) {
+// Intent (command mode) and complexity (input size) pick the model. Cheapest wins where the intent allows it.
+// answer: a question, usually with the contributing guide and README excerpt as context.
+// review: a question about a PR diff, which needs more reasoning than a plain question.
+// fix: edits that must be exact, so the standard model is the minimum.
+export const MODEL_MATRIX = {
+  answer: { small: MODELS.cheap, large: MODELS.standard, veryLarge: MODELS.flagship },
+  review: { small: MODELS.standard, large: MODELS.standard, veryLarge: MODELS.flagship },
+  fix: { small: MODELS.standard, large: MODELS.flagship, veryLarge: MODELS.flagship },
+};
+
+export function sizeBand({ task = '', files = [] }) {
   const size = task.length + files.reduce((sum, file) => sum + file.content.length, 0);
-  if (size > COMPLEX_CHARS) return MODELS.flagship;
-  return propose ? MODELS.standard : MODELS.cheap;
+  if (size > VERY_COMPLEX_CHARS) return 'veryLarge';
+  if (size > COMPLEX_CHARS) return 'large';
+  return 'small';
+}
+
+export function chooseModel({ mode = 'answer', task = '', files = [] }) {
+  return MODEL_MATRIX[mode][sizeBand({ task, files })];
 }
 
 // Edits instead of whole files: README.md and prompts.csv are ~100 KB each, too large to return in full.
