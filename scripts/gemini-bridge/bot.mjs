@@ -6,13 +6,9 @@
 import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { askGemini } from './bridge.mjs';
-import { ALLOWED_PATHS, applyEdits, parseCommand, parseEdits, ProposalError } from './lib.mjs';
+import { ALLOWED_PATHS, applyEdits, buildContext, parseCommand, parseEdits, ProposalError } from './lib.mjs';
 
 const FOOTER = '---\n_Generiert mit Gemini über die Repo-Bridge (`/gemini`). Vor dem Übernehmen bitte prüfen._';
-const MAX_DIFF_CHARS = 100_000;
-// Answers get the contributing guide and the start of the README only. The full README is ~126 KB,
-// which would push every question over the cheap-model threshold in chooseModel.
-const README_EXCERPT_CHARS = 6_000;
 const SUMMARY_MAX_CHARS = 70;
 
 async function readOptional(path) {
@@ -26,30 +22,21 @@ async function handle(outDir) {
   }
   const propose = command.mode === 'fix';
 
-  const files = [];
-  if (propose) {
-    for (const path of ALLOWED_PATHS) {
-      files.push({ path, content: await readFile(path, 'utf8') });
-    }
-  } else if (command.mode === 'answer') {
-    files.push({ path: 'CONTRIBUTING.md', content: await readFile('CONTRIBUTING.md', 'utf8') });
-    const readme = await readFile('README.md', 'utf8');
-    files.push({ path: 'README.md (Auszug)', content: readme.slice(0, README_EXCERPT_CHARS) });
-  }
+  const allowedFiles = propose
+    ? await Promise.all(ALLOWED_PATHS.map(async (path) => ({ path, content: await readFile(path, 'utf8') })))
+    : [];
+  const contributing = command.mode === 'answer' ? await readFile('CONTRIBUTING.md', 'utf8') : '';
+  const readme = command.mode === 'answer' ? await readFile('README.md', 'utf8') : '';
+  const diff = command.mode !== 'answer' ? await readOptional(join(outDir, 'pr.diff')) : '';
 
-  if (command.mode !== 'answer') {
-    const diff = (await readOptional(join(outDir, 'pr.diff'))).slice(0, MAX_DIFF_CHARS);
-    if (command.mode === 'review' && !diff) {
-      return { text: '❌ `/gemini review` funktioniert nur in Pull Requests.' };
-    }
-    if (diff) files.push({ path: 'pr.diff', content: diff });
-  }
+  const context = buildContext({ mode: command.mode, allowedFiles, contributing, readme, diff });
+  if (context.error) return { text: context.error };
 
-  const answer = await askGemini({ task: command.task, files, mode: command.mode });
+  const answer = await askGemini({ task: command.task, files: context.files, mode: command.mode });
   if (!propose) return { text: answer };
 
   const proposal = parseEdits(answer);
-  const changed = applyEdits(proposal, new Map(files.map((file) => [file.path, file.content])));
+  const changed = applyEdits(proposal, new Map(context.files.map((file) => [file.path, file.content])));
   if (changed.size === 0) {
     return { text: `Keine Änderung nötig: ${proposal.summary}` };
   }

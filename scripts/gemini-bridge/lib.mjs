@@ -18,6 +18,11 @@ export const MODELS = {
 export const COMPLEX_CHARS = 20_000;
 export const VERY_COMPLEX_CHARS = 100_000;
 
+// Context size limits per mode. The full README is ~126 KB, which would push every answer
+// over the cheap-model threshold in chooseModel, so answers only get an excerpt.
+export const README_EXCERPT_CHARS = 6_000;
+export const MAX_DIFF_CHARS = 100_000;
+
 // Intent (command mode) and complexity (input size) pick the model. Cheapest wins where the intent allows it.
 // answer: a question, usually with the contributing guide and README excerpt as context.
 // review: a question about a PR diff, which needs more reasoning than a plain question.
@@ -37,6 +42,25 @@ export function sizeBand({ task = '', files = [] }) {
 
 export function chooseModel({ mode = 'answer', task = '', files = [] }) {
   return MODEL_MATRIX[mode][sizeBand({ task, files })];
+}
+
+// Decides what context each /gemini mode needs. Pure (no I/O), so mode rules are testable
+// without mocking the filesystem; the caller reads the raw inputs and passes them in.
+// answer: contributing guide + README excerpt. review: PR diff (required, trimmed to the limit).
+// fix: every allowlisted file, as read by the caller.
+export function buildContext({ mode, allowedFiles = [], contributing = '', readme = '', diff = '' }) {
+  if (mode === 'fix') return { files: allowedFiles };
+  if (mode === 'answer') {
+    return {
+      files: [
+        { path: 'CONTRIBUTING.md', content: contributing },
+        { path: 'README.md (Auszug)', content: readme.slice(0, README_EXCERPT_CHARS) },
+      ],
+    };
+  }
+  const trimmed = diff.slice(0, MAX_DIFF_CHARS);
+  if (!trimmed) return { error: '❌ `/gemini review` funktioniert nur in Pull Requests.' };
+  return { files: [{ path: 'pr.diff', content: trimmed }] };
 }
 
 // Edits instead of whole files: README.md and prompts.csv are ~100 KB each, too large to return in full.
