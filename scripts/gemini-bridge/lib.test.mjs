@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  ALLOWED_PATHS,
   applyEdits,
   buildContext,
   buildPrompt,
@@ -15,6 +16,7 @@ import {
   parseEdits,
   ProposalError,
   README_EXCERPT_CHARS,
+  selectFixPaths,
   VERY_COMPLEX_CHARS,
 } from './lib.mjs';
 
@@ -55,9 +57,24 @@ test('chooseModel moves a large answer up to standard and a very large one to fl
   assert.equal(chooseModel({ mode: 'answer', task: 'Frage', files: sized(VERY_COMPLEX_CHARS) }), MODELS.flagship);
 });
 
-test('chooseModel uses the flagship for a large fix but not a large review', () => {
-  assert.equal(chooseModel({ mode: 'fix', task: 'Fix', files: sized(COMPLEX_CHARS) }), MODELS.flagship);
+test('chooseModel sizes a fix by its task, not by the allowlisted files it carries', () => {
+  assert.equal(chooseModel({ mode: 'fix', task: 'Typo beheben', files: sized(VERY_COMPLEX_CHARS + 1) }), MODELS.standard);
+  assert.equal(chooseModel({ mode: 'fix', task: 'x'.repeat(COMPLEX_CHARS + 1) }), MODELS.flagship);
+});
+
+test('chooseModel keeps a large review on the standard model', () => {
   assert.equal(chooseModel({ mode: 'review', task: 'Prüfen', files: sized(COMPLEX_CHARS) }), MODELS.standard);
+});
+
+test('selectFixPaths sends only the files a fix task names', () => {
+  assert.deepEqual(selectFixPaths('Tippfehler in der README beheben'), ['README.md']);
+  assert.deepEqual(selectFixPaths('Doppelte Zeile in prompts.csv entfernen'), ['prompts.csv']);
+  assert.deepEqual(selectFixPaths('CSV und Readme angleichen'), ['README.md', 'prompts.csv']);
+  assert.deepEqual(selectFixPaths('Abschnitt in CONTRIBUTING kürzen'), ['CONTRIBUTING.md']);
+});
+
+test('selectFixPaths falls back to every allowlisted file when none is named', () => {
+  assert.deepEqual(selectFixPaths('Neuen Prompt "Koch" hinzufügen'), ALLOWED_PATHS);
 });
 
 test('chooseModel counts the task text towards the size band', () => {

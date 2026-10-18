@@ -40,8 +40,23 @@ export function sizeBand({ task = '', files = [] }) {
   return 'small';
 }
 
+// For fix, the context is always the allowlisted files, and README.md and prompts.csv are each over
+// VERY_COMPLEX_CHARS. Counting them would send every fix to the flagship, so a fix is sized by its task text only.
 export function chooseModel({ mode = 'answer', task = '', files = [] }) {
-  return MODEL_MATRIX[mode][sizeBand({ task, files })];
+  return MODEL_MATRIX[mode][sizeBand({ task, files: mode === 'fix' ? [] : files })];
+}
+
+const PATH_MENTIONS = {
+  'README.md': /readme/i,
+  'prompts.csv': /prompts\.csv|\bcsv\b/i,
+  'CONTRIBUTING.md': /contributing/i,
+};
+
+// The allowlisted files a fix task names. Naming none means all of them, e.g. for "add a prompt",
+// which CONTRIBUTING.md says goes into both README.md and prompts.csv.
+export function selectFixPaths(task) {
+  const named = ALLOWED_PATHS.filter((path) => PATH_MENTIONS[path].test(task));
+  return named.length ? named : ALLOWED_PATHS;
 }
 
 // Decides what context each /gemini mode needs. Pure (no I/O), so mode rules are testable
