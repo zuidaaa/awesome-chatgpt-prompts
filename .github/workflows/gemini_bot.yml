@@ -50,6 +50,13 @@ jobs:
           mkdir -p "$OUT_DIR"
           gh pr diff "$ITEM_NUMBER" --repo "$GITHUB_REPOSITORY" > "$OUT_DIR/pr.diff" || true
 
+      # Diagnostic only: logs whether the secret reaches the job, never its value.
+      - name: Check secret presence
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -n "$GEMINI_API_KEY" ]; then echo "GEMINI_API_KEY: present"; else echo "GEMINI_API_KEY: missing"; fi
+
       - name: Ask Gemini
         id: bot
         env:
