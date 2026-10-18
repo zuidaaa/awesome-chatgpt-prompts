@@ -32,7 +32,12 @@ async function handle(outDir) {
   const context = buildContext({ mode: command.mode, allowedFiles, contributing, readme, diff });
   if (context.error) return { text: context.error };
 
-  const { text: answer, model, usage } = await askGemini({ task: command.task, files: context.files, mode: command.mode });
+  const { text: answer, model, usage } = await askGemini({
+    task: command.task,
+    files: context.files,
+    mode: command.mode,
+    flagship: command.flagship,
+  });
   const meta = formatUsage({ model, usage });
   if (!propose) return { text: answer, meta };
 
