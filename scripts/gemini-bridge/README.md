@@ -6,17 +6,19 @@ Gemini als zweiter Mitarbeiter im Projekt: über GitHub-Kommentare oder lokal im
 
 1. **Secret** `GEMINI_API_KEY` unter *Settings → Secrets and variables → Actions* anlegen.
 
-Die Modellwahl richtet sich nach drei Faktoren (`chooseModel` in `lib.mjs`): dem Vorhaben (Befehl), der Komplexität (Größe von Frage plus Kontext) und sparsam als Standard.
+Die Modellwahl (`chooseModel` in `lib.mjs`) ist so sparsam wie möglich:
 
-| Vorhaben | klein (≤ 20 000 Zeichen) | groß (≤ 100 000) | sehr groß |
-| --- | --- | --- | --- |
-| Frage (`/gemini`) | `gemini-3.5-flash-lite` | `gemini-3.8-flash` | `gemini-4-argon` |
-| Review (`/gemini review`) | `gemini-3.8-flash` | `gemini-3.8-flash` | `gemini-4-argon` |
-| Fix (`/gemini fix`) | `gemini-3.8-flash` | `gemini-4-argon` | `gemini-4-argon` |
+| Anfrage | Modell |
+| --- | --- |
+| Standard, Auftrag plus Kontext bis 20 000 Zeichen | `gemini-3.5-flash-lite` |
+| Groß, über 20 000 Zeichen, etwa ein großer Diff oder ein Fix an `README.md` oder `prompts.csv` | `gemini-3.8-flash` |
+| Nur auf ausdrücklichen Wunsch mit `/gemini!` | `gemini-4-argon` |
 
-Bei `fix` zählt nur die Länge des Auftrags. Die mitgeschickten Dateien zählen nicht, weil schon `README.md` und `prompts.csv` allein über 100 000 Zeichen haben. Sonst bekäme jeder Fix das Flagship-Modell. Ein normaler Fix läuft damit auf `gemini-3.8-flash`. Gemini muss für einen Fix keine ganze Datei schreiben, sondern nur einzelne Stellen ersetzen. Jede Ersetzung wird geprüft: Der gesuchte Text muss genau einmal vorkommen. Ein ungenauer Vorschlag wird verworfen und nicht übernommen.
+Das Flagship-Modell wird nie automatisch gewählt. An der Zeichenzahl lässt sich nicht erkennen, ob eine Anfrage wirklich schwer ist. Gedacht ist `/gemini!` für Ausnahmen: äußerst schwere Fragen oder Reviews, oder wenn die Antwort eines anderen Modells zweifelhaft war.
 
-Die Modell-IDs stehen unter https://ai.google.dev/gemini-api/docs/models. Zum Ändern die Konstanten in `MODELS`, die Tabelle `MODEL_MATRIX` und die Schwellen `COMPLEX_CHARS` und `VERY_COMPLEX_CHARS` anpassen.
+Bei `fix` muss Gemini keine ganze Datei schreiben, sondern nur einzelne Stellen ersetzen. Jede Ersetzung wird geprüft: Der gesuchte Text muss genau einmal vorkommen. Ein ungenauer Vorschlag wird verworfen und nicht übernommen.
+
+Die Modell-IDs stehen unter https://ai.google.dev/gemini-api/docs/models. Zum Ändern die Konstanten `MODELS` und `COMPLEX_CHARS` in `lib.mjs` anpassen.
 
 ## GitHub: `/gemini`
 
@@ -25,6 +27,7 @@ Kommentar in einem Issue oder PR (nur Owner, Member und Collaborator):
 - `/gemini <Frage>`: Gemini antwortet als Kommentar. Kontext sind `CONTRIBUTING.md` und der Anfang der `README.md` (6 000 Zeichen). Kein Diff.
 - `/gemini review <Frage>`: Wie oben, aber mit dem PR-Diff als Kontext. Funktioniert nur in Pull Requests. Gefundene Probleme kommen nach Schwere sortiert, mit Datei und Zeile, höchstens fünf.
 - `/gemini fix <Auftrag>`: Gemini schlägt Änderungen an `README.md`, `prompts.csv` oder `CONTRIBUTING.md` vor. Nennt der Auftrag eine dieser Dateien („README“, „csv“, „CONTRIBUTING“), wird nur diese mitgeschickt. Das spart Input-Tokens. Nennt er keine, gehen alle drei mit, etwa für „neuen Prompt hinzufügen“, der laut `CONTRIBUTING.md` in README und CSV gehört. Die Änderungen landen auf einer Branch `gemini/<nr>-<run>` als **Draft-PR**. Gemergt wird nur von Hand.
+- `/gemini! …`: Wie die drei Befehle oben (`/gemini! <Frage>`, `/gemini! review …`, `/gemini! fix …`), aber mit `gemini-4-argon`. Das ist teuer und nur für Ausnahmen gedacht.
 
 Der Workflow ist `.github/workflows/gemini_bot.yml`. Er checkt nur den Default-Branch aus, nie den PR-Head.
 
@@ -46,7 +49,7 @@ Vorübergehende Fehler wiederholt die Bridge bis zu viermal, mit Pausen von 1, 3
 GEMINI_API_KEY=... node scripts/gemini-bridge/bridge.mjs "Ist dieser Absatz verständlich?" --file CONTRIBUTING.md
 ```
 
-Das Skript schreibt nie Dateien. Mit `--propose` wird der rohe Edit-Vorschlag ausgegeben.
+Das Skript schreibt nie Dateien. Mit `--propose` wird der rohe Edit-Vorschlag ausgegeben, mit `--flagship` wird `gemini-4-argon` genutzt.
 
 Die Antwort steht auf stdout, Modell und Token-Verbrauch auf stderr. So kann ein anderes Werkzeug, etwa Claude Code, Gemini eine große Datei lesen lassen und bekommt nur die kurze Antwort in seinen Kontext.
 
